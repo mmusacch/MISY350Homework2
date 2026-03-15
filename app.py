@@ -12,7 +12,6 @@ if json_file.exists():
     with open(json_file, "r") as f:
         inventory = json.load(f)
 else:
-    # Default data if file doesn't exist
     inventory = [] 
 
 if "orders" not in st.session_state:
@@ -40,7 +39,6 @@ with tab1:
                 found_item = item
                 break
         if found_item:
-            #check back again
             if found_item["stock"] >= quantity:
                 found_item["stock"] = found_item["stock"] - quantity
                 total_price = found_item["price"] * quantity
@@ -53,7 +51,10 @@ with tab1:
                     "total": total_price,
                     "status":"Placed"
                 }
-
+            st.session_state["orders"].append(order)
+            with json_file.open("w", encoding="utf-8") as f:
+                json.dump(inventory, f)
+            st.success("Order placed successfully!")
 #Section 2
 with tab2: 
     st.subheader("View & Search Inventory")
@@ -100,27 +101,25 @@ with tab3:
 
 with tab4:
     st.header("Manage Orders")
-    if len(st.session_state["orders"]) == 0: 
-        st.info("No orders placed yet")
-    else:
-        st.subheader("Active Orders")
+    if len(st.session_state["orders"]) == 0:
         st.dataframe(st.session_state["orders"])
-        order_ids = order["order_id"]
-        selected_order_id = st.selectbox( "Select Order to Cancel", order_ids, key="cancel_order" )
-        cancel_order = st.button("Cancel Order")
-        if cancel_order:
-            selected_order = None
-            for order in st.session_state["orders"]:
-                if order["order_id"] == selected_order_id: 
-                    selected_order = order 
-                    break
+    else:
+        if len(st.session_state["orders"]) == 0: 
+            order_ids = order["order_id"]
+            selected_order_id = st.selectbox( "Select Order to Cancel", order_ids, key="cancel_order" )
+            cancel_order = st.button("Cancel Order")
+            if cancel_order:
+                selected_order = None
+                for order in st.session_state["orders"]:
+                    if order["order_id"] == selected_order_id: 
+                        selected_order = order 
+                        break
 
-        if selected_order and selected_order["status"] == "Placed":
-            # return stock
-            for item in inventory:
-                if item["name"] == selected_order["item"]: 
-                    item["stock"] += selected_order["quantity"] 
-            selected_order["status"] = "Cancelled"
-            with json_file.open("w", encoding="utf-8") as f:
-                json.dump(inventory, f)
-            st.success("Order Cancelled and Stock Refunded")    
+            if selected_order and selected_order["status"] == "Placed":
+                for item in inventory:
+                    if item["name"] == selected_order["item"]: 
+                        item["stock"] += selected_order["quantity"] 
+                selected_order["status"] = "Cancelled"
+                with json_file.open("w", encoding="utf-8") as f:
+                    json.dump(inventory, f)
+                st.success("Order Cancelled and Stock Refunded")    
